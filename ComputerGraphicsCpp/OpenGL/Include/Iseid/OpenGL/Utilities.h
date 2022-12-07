@@ -1,11 +1,13 @@
 ﻿#pragma once
+#include <GL/gl.h>
+#include <gl/glut.h>
 
 namespace OpenGL_Enums
 {
     struct DisplayModeBitMask
     {
         static constexpr unsigned int RGB = 0;
-        static constexpr unsigned int RGBA = GLUT_RGB;
+        static constexpr unsigned int RGBA = RGB;
         static constexpr unsigned int Index = 1;
         static constexpr unsigned int Single = 0;
         static constexpr unsigned int Double = 2;
