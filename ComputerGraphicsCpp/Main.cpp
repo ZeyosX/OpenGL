@@ -1,230 +1,319 @@
 //------- Ignore this ----------
 #include<filesystem>
+
+#include "GameObject.h"
+namespace fs = std::filesystem;
 //------------------------------
 
-#include"Model.h"
+#include<iostream>
+#include<glad/glad.h>
+#include<GLFW/glfw3.h>
+#include<stb/stb_image.h>
+#include<glm/glm.hpp>
+#include<glm/gtc/matrix_transform.hpp>
+#include<glm/gtc/type_ptr.hpp>
+
+#include"Texture.h"
+#include"shaderClass.h"
+#include"VAO.h"
+#include"VBO.h"
+#include"EBO.h"
+#include"Camera.h"
 
 
 const unsigned int width = 800;
 const unsigned int height = 800;
 
 
-float rectangleVertices[] =
+// Vertices coordinates
+GLfloat vertices[] =
 {
-	// Coords    // texCoords
-	 1.0f, -1.0f,  1.0f, 0.0f,
-	-1.0f, -1.0f,  0.0f, 0.0f,
-	-1.0f,  1.0f,  0.0f, 1.0f,
+    //     COORDINATES     /        COLORS          /    TexCoord   /        NORMALS       //
+    -0.1f, -0.1f, 0.1f, 0.83f, 0.70f, 0.44f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, // Bottom side
+    -0.1f, -0.1f, -0.1f, 0.83f, 0.70f, 0.44f, 0.0f, 5.0f, 0.0f, -1.0f, 0.0f, // Bottom side
+    0.1f, -0.1f, -0.1f, 0.83f, 0.70f, 0.44f, 5.0f, 5.0f, 0.0f, -1.0f, 0.0f, // Bottom side
+    0.1f, -0.1f, 0.1f, 0.83f, 0.70f, 0.44f, 5.0f, 0.0f, 0.0f, -1.0f, 0.0f, // Bottom side
 
-	 1.0f,  1.0f,  1.0f, 1.0f,
-	 1.0f, -1.0f,  1.0f, 0.0f,
-	-1.0f,  1.0f,  0.0f, 1.0f
+    -0.1f, 0.1f, 0.1f, 0.83f, 0.70f, 0.44f, 0.0f, 0.0f, -0.8f, 0.5f, 0.0f, // Left Side
+    -0.1f, 0.1f, -0.1f, 0.83f, 0.70f, 0.44f, 5.0f, 0.0f, -0.8f, 0.5f, 0.0f, // Left Side
+    0.1f, 0.1f, -0.1f, 0.92f, 0.86f, 0.76f, 2.5f, 5.0f, -0.8f, 0.5f, 0.0f, // Left Side
+
+    0.1f, 0.1f, 0.1f, 0.83f, 0.70f, 0.44f, 5.0f, 0.0f, 0.0f, 0.5f, -0.8f, // Non-facing side
+};
+
+// Indices for vertices order
+GLuint indices[] =
+{
+    0, 1, 2,
+    0, 2, 3,
+    0, 4, 7,
+    0, 7, 3,
+    3, 7, 6,
+    3, 6, 2,
+    2, 6, 5,
+    2, 5, 1,
+    1, 5, 4,
+    1, 4, 0,
+    4, 5, 6,
+    4, 6, 7
+};
+
+// 3d Cube vertices
+float cubeVertices[] = {
+    -0.1f, -0.1f, 0.1f, .5f, .5f,
+    -0.1f, -0.1f, -0.1f, .5f, .5f,
+    0.1f, -0.1f, -0.1f, 1.0f, 1.0f,
+    0.1f, -0.1f, 0.1f, 1.0f, 1.0f,
+    -0.1f, 0.1f, 0.1f, .5f, .5f,
+    -0.1f, 0.1f, -0.1f, .5f, .5f,
+    0.1f, 0.1f, -0.1f, .0f, .0f,
+    0.1f, 0.1f, 0.1f, .0f, .0f
+};
+
+// Indices for vertices order
+GLuint cubeIndices[] =
+{
+    0, 1, 2,
+    0, 2, 3,
+    0, 4, 7,
+    0, 7, 3,
+    3, 7, 6,
+    3, 6, 2,
+    2, 6, 5,
+    2, 5, 1,
+    1, 5, 4,
+    1, 4, 0,
+    4, 5, 6,
+    4, 6, 7
 };
 
 
-int main()
+GLfloat lightVertices[] =
 {
-	// Initialize GLFW
-	glfwInit();
+    //     COORDINATES     //
+    -0.1f, -0.1f, 0.1f,
+    -0.1f, -0.1f, -0.1f,
+    0.1f, -0.1f, -0.1f,
+    0.1f, -0.1f, 0.1f,
+    -0.1f, 0.1f, 0.1f,
+    -0.1f, 0.1f, -0.1f,
+    0.1f, 0.1f, -0.1f,
+    0.1f, 0.1f, 0.1f
+};
 
-	// Tell GLFW what version of OpenGL we are using 
-	// In this case we are using OpenGL 3.3
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	// Tell GLFW we are using the CORE profile
-	// So that means we only have the modern functions
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	// Create a GLFWwindow object of 800 by 800 pixels, naming it "YoutubeOpenGL"
-	GLFWwindow* window = glfwCreateWindow(width, height, "YoutubeOpenGL", NULL, NULL);
-	// Error check if the window fails to create
-	if (window == nullptr)
-	{
-		std::cout << "Failed to create GLFW window" << std::endl;
-		glfwTerminate();
-		return -1;
-	}
-	// Introduce the window into the current context
-	glfwMakeContextCurrent(window);
-
-	//Load GLAD so it configures OpenGL
-	gladLoadGL();
-	// Specify the viewport of OpenGL in the Window
-	// In this case the viewport goes from x = 0, y = 0, to x = 800, y = 800
-	glViewport(0, 0, width, height);
+GLuint lightIndices[] =
+{
+    0, 1, 2,
+    0, 2, 3,
+    0, 4, 7,
+    0, 7, 3,
+    3, 7, 6,
+    3, 6, 2,
+    2, 6, 5,
+    2, 5, 1,
+    1, 5, 4,
+    1, 4, 0,
+    4, 5, 6,
+    4, 6, 7
+};
 
 
+auto main() -> int
+{
+    // Initialize GLFW
+    glfwInit();
+
+    // Tell GLFW what version of OpenGL we are using 
+    // In this case we are using OpenGL 3.3
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    // Tell GLFW we are using the CORE profile
+    // So that means we only have the modern functions
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    // Create a GLFWwindow object of 800 by 800 pixels, naming it "YoutubeOpenGL"
+    GLFWwindow* window = glfwCreateWindow(width, height, "Omar Iseid Final Project", nullptr, nullptr);
+    // Error check if the window fails to create
+    if (window == nullptr)
+    {
+        std::cout << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+    // Introduce the window into the current context
+    glfwMakeContextCurrent(window);
+
+    //Load GLAD so it configures OpenGL
+    gladLoadGL();
+    // Specify the viewport of OpenGL in the Window
+    // In this case the viewport goes from x = 0, y = 0, to x = 800, y = 800
+    glViewport(0, 0, width, height);
 
 
+    // Generates Shader object using shaders default.vert and default.frag
+    Shader shaderProgram("Shaders/default.vert", "Shaders/default.frag");
+    // Generates Vertex Array Object and binds it
 
-	// Generates shaders
-	Shader shaderProgram("Shaders/default.vert", "Shaders/default.frag");
-	Shader framebufferProgram("Shaders/framebuffer.vert", "Shaders/framebuffer.frag");
-
-	// Take care of all the light related things
-	auto lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	auto lightPos = glm::vec3(0.5f, 0.5f, 0.5f);
-
-	shaderProgram.Activate();
-	glUniform4f(glGetUniformLocation(shaderProgram.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
-	glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
-	framebufferProgram.Activate();
-	glUniform1i(glGetUniformLocation(framebufferProgram.ID, "screenTexture"), 0);
-
-
-	
-
-	// Enables the Depth Buffer
-	glEnable(GL_DEPTH_TEST);
-
-	// Enables Cull Facing
-	glEnable(GL_CULL_FACE);
-	// Keeps front faces
-	glCullFace(GL_FRONT);
-	// Uses counter clock-wise standard
-	glFrontFace(GL_CCW);
+# if true
+    auto cube =new GameObject({.0f,.0f,.0f},
+            {.0f,.0f,.0f},{.0f,.0f,.0f},
+            cubeVertices, cubeIndices,
+            sizeof cubeVertices,sizeof cubeIndices );
+    VAO VAO1;
+    VAO1.Bind();
+    VAO1.LinkAttrib(*cube->vbo, 0, 3, GL_FLOAT, 5 * sizeof(float), nullptr);
+    VAO1.LinkAttrib(*cube->vbo, 2, 2, GL_FLOAT, 5 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
+    // Unbind all to prevent accidentally modifying them
+    VAO1.Unbind();
+    cube->vbo->Unbind();
+    cube->ebo->Unbind();
+#endif
 
 
-	// Creates camera object
-	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
+    
+    
+#if 0
+    VAO VAO1;
+    VAO1.Bind();
+    // Generates Vertex Buffer Object and links it to vertices
+    //VBO VBO1(vertices, sizeof(vertices));
+    VBO VBO1(cubeVertices, sizeof cubeVertices);
+    // Generates Element Buffer Object and links it to indices
+    //EBO EBO1(indices, sizeof(indices));
+    EBO EBO1(cubeIndices, sizeof cubeIndices);
+    // Links VBO attributes such as coordinates and colors to VAO
+    VAO1.LinkAttrib(VBO1, 0, 3, GL_FLOAT, 5 * sizeof(float), 0);
+    VAO1.LinkAttrib(VBO1, 2, 2, GL_FLOAT, 5 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
+    // Unbind all to prevent accidentally modifying them
+    VAO1.Unbind();
+    VBO1.Unbind();
+    EBO1.Unbind();
+#endif
+    
+    
+    
 
 
-	/*
-	* I'm doing this relative path thing in order to centralize all the resources into one folder and not
-	* duplicate them between tutorial folders. You can just copy paste the resources from the 'Resources'
-	* folder and then give a relative path from this folder to whatever resource you want to get to.
-	* Also note that this requires C++17, so go to Project Properties, C/C++, Language, and select C++17
-	*/
-	std::string parentDir = "C:/Users/LinaFIs/Desktop/Test";
-	std::string modelPath = "/crow/scene.gltf";
-	
-	// Load in models
-	Model model((parentDir + modelPath).c_str());
+    // Shader for light cube
+    Shader lightShader("Shaders/light.vert", "Shaders/light.frag");
+    // Generates Vertex Array Object and binds it
+    VAO lightVAO;
+    lightVAO.Bind();
+    // Generates Vertex Buffer Object and links it to vertices
+    VBO lightVBO(lightVertices, sizeof(lightVertices));
+    // Generates Element Buffer Object and links it to indices
+    EBO lightEBO(lightIndices, sizeof(lightIndices));
+    // Links VBO attributes such as coordinates and colors to VAO
+    lightVAO.LinkAttrib(lightVBO, 0, 3, GL_FLOAT, 3 * sizeof(float), (void*)0);
+    // Unbind all to prevent accidentally modifying them
+    lightVAO.Unbind();
+    lightVBO.Unbind();
+    lightEBO.Unbind();
 
 
-	// Prepare framebuffer rectangle VBO and VAO
-	unsigned int rectVAO, rectVBO;
-	glGenVertexArrays(1, &rectVAO);
-	glGenBuffers(1, &rectVBO);
-	glBindVertexArray(rectVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(rectangleVertices), &rectangleVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    auto lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    auto lightPos = glm::vec3(0.5f, 0.5f, 0.5f);
+    auto lightModel = glm::mat4(1.0f);
+    lightModel = glm::translate(lightModel, lightPos);
+
+    auto pyramidPos = glm::vec3(0.0f, 0.0f, 0.0f);
+    auto pyramidModel = glm::mat4(1.0f);
+    pyramidModel = glm::translate(pyramidModel, pyramidPos);
 
 
-
-	// Variables to create periodic event for FPS displaying
-	double prevTime = 0.0;
-	double crntTime = 0.0;
-	double timeDiff;
-	// Keeps track of the amount of frames in timeDiff
-	unsigned int counter = 0;
-
-	// Use this to disable VSync (not advised)
-	//glfwSwapInterval(0);
-
-
-	// Create Frame Buffer Object
-	unsigned int FBO;
-	glGenFramebuffers(1, &FBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-
-	// Create Framebuffer Texture
-	unsigned int framebufferTexture;
-	glGenTextures(1, &framebufferTexture);
-	glBindTexture(GL_TEXTURE_2D, framebufferTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // Prevents edge bleeding
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Prevents edge bleeding
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebufferTexture, 0);
-
-	// Create Render Buffer Object
-	unsigned int RBO;
-	glGenRenderbuffers(1, &RBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+    lightShader.Activate();
+    glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lightModel));
+    glUniform4f(glGetUniformLocation(lightShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z,
+                lightColor.w);
+    shaderProgram.Activate();
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram.ID, "model"), 1, GL_FALSE, glm::value_ptr(pyramidModel));
+    glUniform4f(glGetUniformLocation(shaderProgram.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z,
+                lightColor.w);
+    glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
 
 
-	// Error checking framebuffer
-	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "Framebuffer error: " << fboStatus << std::endl;
+    /*
+    * I'm doing this relative path thing in order to centralize all the resources into one folder and not
+    * duplicate them between tutorial folders. You can just copy paste the resources from the 'Resources'
+    * folder and then give a relative path from this folder to whatever resource you want to get to.
+    * Also note that this requires C++17, so go to Project Properties, C/C++, Language, and select C++17
+    */
+    std::string texPath = R"(C:\Users\LinaFIs\Desktop\Test\Grass-Block-600x600.png)";
+
+    // Texture
+    Texture brickTex((texPath).c_str(), GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
+    brickTex.texUnit(shaderProgram, "tex0", 0);
+
+    // Original code from the tutorial
+    /*Texture brickTex("brick.png", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
+    brickTex.texUnit(shaderProgram, "tex0", 0);*/
 
 
-	// Main while loop
-	while (!glfwWindowShouldClose(window))
-	{
-		// Updates counter and times
-		crntTime = glfwGetTime();
-		timeDiff = crntTime - prevTime;
-		counter++;
+    // Enables the Depth Buffer
+    glEnable(GL_DEPTH_TEST);
 
-		if (timeDiff >= 1.0 / 30.0)
-		{
-			// Creates new title
-			std::string FPS = std::to_string((1.0 / timeDiff) * counter);
-			std::string ms = std::to_string((timeDiff / counter) * 1000);
-			std::string title = "FPS: " + FPS + " | Frame Time: " + ms + "ms";
-			glfwSetWindowTitle(window, title.c_str());
+    // Creates camera object
+    Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
 
-			// Resets times and counter
-			prevTime = crntTime;
-			counter = 0;
+    // Main while loop
+    while (!glfwWindowShouldClose(window))
+    {
+        // Specify the color of the background
+        glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+        // Clean the back buffer and depth buffer
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			// Use this if you have disabled VSync
-			//camera.Inputs(window);
-		}
+        // Handles camera inputs
+        camera.Inputs(window);
+        // Updates and exports the camera matrix to the Vertex Shader
+        camera.updateMatrix(45.0f, 0.1f, 100.0f);
 
 
-		// Bind the custom framebuffer
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-		// Specify the color of the background
-		glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
-		// Clean the back buffer and depth buffer
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		// Enable depth testing since it's disabled when drawing the framebuffer rectangle
-		glEnable(GL_DEPTH_TEST);
-
-		// Handles camera inputs (delete this if you have disabled VSync)
-		camera.Inputs(window);
-		// Updates and exports the camera matrix to the Vertex Shader
-		camera.updateMatrix(45.0f, 0.1f, 100.0f);
-
-
-		// Draw the normal model
-		model.Draw(shaderProgram, camera);
+        // Tells OpenGL which Shader Program we want to use
+        shaderProgram.Activate();
+        // Exports the camera Position to the Fragment Shader for specular lighting
+        glUniform3f(glGetUniformLocation(shaderProgram.ID, "camPos"), camera.Position.x, camera.Position.y,
+                    camera.Position.z);
+        // Export the camMatrix to the Vertex Shader of the pyramid
+        camera.Matrix(shaderProgram, "camMatrix");
+        // Binds texture so that is appears in rendering
+        brickTex.Bind();
+        // Bind the VAO so OpenGL knows to use it
+        VAO1.Bind();
+        // Draw primitives, number of indices, datatype of indices, index of indices
+        glDrawElements(GL_TRIANGLES, sizeof cubeIndices / sizeof(int), GL_UNSIGNED_INT, nullptr);
 
 
-		// Bind the default framebuffer
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		// Draw the framebuffer rectangle
-		framebufferProgram.Activate();
-		glBindVertexArray(rectVAO);
-		glDisable(GL_DEPTH_TEST); // prevents framebuffer rectangle from being discarded
-		glBindTexture(GL_TEXTURE_2D, framebufferTexture);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+        // Tells OpenGL which Shader Program we want to use
+        lightShader.Activate();
+        // Export the camMatrix to the Vertex Shader of the light cube
+        camera.Matrix(lightShader, "camMatrix");
+        // Bind the VAO so OpenGL knows to use it
+        lightVAO.Bind();
+        // Draw primitives, number of indices, datatype of indices, index of indices
+        glDrawElements(GL_TRIANGLES, sizeof(lightIndices) / sizeof(int), GL_UNSIGNED_INT, nullptr);
 
 
-		// Swap the back buffer with the front buffer
-		glfwSwapBuffers(window);
-		// Take care of all GLFW events
-		glfwPollEvents();
-	}
+        // Swap the back buffer with the front buffer
+        glfwSwapBuffers(window);
+        // Take care of all GLFW events
+        glfwPollEvents();
+    }
 
 
-
-	// Delete all the objects we've created
-	shaderProgram.Delete();
-	glDeleteFramebuffers(1, &FBO);
-	// Delete window before ending the program
-	glfwDestroyWindow(window);
-	// Terminate GLFW before ending the program
-	glfwTerminate();
-	return 0;
+    // Delete all the objects we've created
+    VAO1.Delete();
+    cube->vbo->Delete();
+    cube->ebo->Delete();
+    brickTex.Delete();
+    shaderProgram.Delete();
+    lightVAO.Delete();
+    lightVBO.Delete();
+    lightEBO.Delete();
+    lightShader.Delete();
+    // Delete window before ending the program
+    glfwDestroyWindow(window);
+    // Terminate GLFW before ending the program
+    glfwTerminate();
+    return 0;
 }
